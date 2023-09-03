@@ -17,10 +17,10 @@ document.body.appendChild(renderer.domElement)
 
 const controls = new OrbitControls(camera, renderer.domElement)
 
-const ambientLight = new THREE.AmbientLight('white', 1)
+const ambientLight = new THREE.AmbientLight(0xffffff, 1)
 scene.add(ambientLight)
 
-const directionalLight = new THREE.DirectionalLight('white', 0.8)
+const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5)
 directionalLight.position.set(0, 50, 0)
 directionalLight.castShadow = true
 directionalLight.shadow.mapSize.width = 1024
@@ -30,13 +30,14 @@ scene.add(directionalLight)
 const axesHelper = new THREE.AxesHelper(4)
 scene.add(axesHelper)
 
-const gridHelper = new THREE.GridHelper(40, 40, 'skyblue', 'skyblue')
+const gridHelper = new THREE.GridHelper(40, 40)
 scene.add(gridHelper)
 
-const planeGep = new THREE.PlaneGeometry(10, 10)
+const planeGep = new THREE.PlaneGeometry(40, 40)
 const planeMat = new THREE.MeshStandardMaterial({
-    color: 'white',
+    color: 0xffffff,
     side: THREE.DoubleSide,
+    visible: false,
 })
 
 const planeMesh = new THREE.Mesh(planeGep, planeMat)
@@ -49,12 +50,22 @@ const world = new CANNON.World({
 const planeMatBody = new CANNON.Material()
 const planeBody = new CANNON.Body({
     type: CANNON.Body.STATIC,
-    shape: new CANNON.Box(new CANNON.Vec3(5, 5, 0.001)),
+    shape: new CANNON.Box(new CANNON.Vec3(40, 40, 0.001)),
     material: planeMatBody,
 })
 
 planeBody.quaternion.setFromEuler(-Math.PI / 2, 0, 0)
 world.addBody(planeBody)
+
+const highlightMesh = new THREE.Mesh(
+    new THREE.PlaneGeometry(1, 1),
+    new THREE.MeshStandardMaterial({
+        color: 0xffffff,
+        side: THREE.DoubleSide,
+    })
+)
+highlightMesh.rotateX(-Math.PI / 2)
+scene.add(highlightMesh)
 
 const mouse = new THREE.Vector2()
 const intersectionPlane = new THREE.Vector3()
@@ -111,6 +122,23 @@ function onWindowResize() {
     renderer.setSize(window.innerWidth, window.innerHeight)
     render()
 }
+
+const mousePosition = new THREE.Vector2()
+const raycasterv2 = new THREE.Raycaster()
+let intersects
+
+window.addEventListener('mousemove', function (e) {
+    mousePosition.x = (e.clientX / window.innerWidth) * 2 - 1
+    mousePosition.y = -(e.clientY / window.innerHeight) * 2 + 1
+    raycaster.setFromCamera(mousePosition, camera)
+    intersects = raycaster.intersectObjects(scene.children)
+    intersects.forEach(function (intersect) {
+        if ((intersect.object.name = 'ground')) {
+            const higtlightPos = new THREE.Vector3().copy(intersect.point).floor().addScalar(0.5)
+            highlightMesh.position.set(higtlightPos.x, 0, higtlightPos.z)
+        }
+    })
+})
 
 function animate() {
     requestAnimationFrame(animate)
